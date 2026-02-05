@@ -1,0 +1,19 @@
+model:
+  latent_dim: 100 # dimension of the latent space
+  embed_dim: 50 # dimension of the class label embedding
+  generator_channels: [256, 128, 64] # changed over previous iteration to accomodate to image size 32 instead of 64
+  discriminator_channels: [64, 128, 256]
+training:
+  batch_size: 64 # I do not own a CUDA-compatible GPU, so setting this a bit lower
+  num_epochs: 100 # might need to be regulated downwards? especially for testing purposes
+  lr_g: 0.0002 # generator's learning rate
+  lr_d: 0.0002 # discriminator's learning rate
+  beta1: 0.5
+  beta2: 0.999 # parameters for Adam optimizer
+data:
+  num_workers: 2
+  num_classes: 10
+  image_size: 32 # these parameters are for working with CIFAR-10, they are incorrect
+  data_root: "./data/data/raw"
+  # in the example in the project description
+seed: 42 # random seed, this choice is arbitrary but should stay the same for reproducibility

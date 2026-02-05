@@ -53,8 +53,7 @@ def get_dataloaders(config):
         test_loader (DataLoader): Loader for test set.
     """
     data_root = config["data"]["data_root"]
-
-    batch_size = config["data"]["batch_size"]
+    batch_size = config["training"]["batch_size"]
     image_size = config["data"]["image_size"]
     num_workers = config["data"].get("num_workers", 2)
 
@@ -104,18 +103,17 @@ def get_dataloaders(config):
 if __name__ == "__main__":
     import yaml
 
-    # Mock config for testing
-    mock_config = {
-        "data": {
-            "data_root": "./data/raw",
-            "image_size": 64,
-            "batch_size": 64,
-            "num_workers": 0,
-        }
-    }
+    # Choose the correct config file
+    os.chdir(os.path.dirname(__file__))
+    os.chdir("..")
+    config_base = "./config/baseline_config.yaml"
+    config_improved = "./config/improved_config.yaml"
 
+    # Load config file and save configs in 'config' dictionary
+    with open(config_base, "r") as file:
+        config = yaml.safe_load(file)
 
-    train_l, test_l = get_dataloaders(mock_config)
+    train_l, test_l = get_dataloaders(config)
 
     # Check one batch
     images, labels = next(iter(train_l))
