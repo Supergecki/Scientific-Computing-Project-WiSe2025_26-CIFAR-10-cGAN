@@ -22,7 +22,6 @@ def get_transforms(aug_train=True):
         transform = transforms.Compose(
             [
                 transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomHorizontalFlip(p=0.5),
                 transforms.RandomRotation(degrees=5),
                 # transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05),
                 transforms.ToTensor(),
@@ -52,10 +51,10 @@ def get_dataloaders(config):
         train_loader (DataLoader): Loader for training set.
         test_loader (DataLoader): Loader for test set.
     """
-    data_root = config["data"]["data_root"]
+    data_root = config["data"]["data_root"] # Default file path where the CIFAR-10 dataset will be located
     batch_size = config["training"]["batch_size"]
     image_size = config["data"]["image_size"]
-    num_workers = config["data"].get("num_workers", 2)
+    num_workers = config["data"].get("num_workers", 2) # Number of parallel subprocesses used for loading the data
 
     # Ensure data directory exists
     os.makedirs(data_root, exist_ok=True)
@@ -65,7 +64,6 @@ def get_dataloaders(config):
     test_transform = get_transforms(aug_train=False)
 
     # Load Datasets
-    # CIFAR-10 is used as requested in the specific text block
     train_dataset = datasets.CIFAR10(
         root=data_root, train=True, download=True, transform=train_transform
     )
@@ -79,7 +77,7 @@ def get_dataloaders(config):
         train_dataset,
         batch_size=batch_size,
         shuffle=True,  # Shuffle training data
-        num_workers=num_workers,
+        num_workers=num_workers, # Number of parallel subprocesses for loading the data
         pin_memory=True,  # Faster data transfer to CUDA
         drop_last=True,  # Drop incomplete batches to keep sizes consistent
     )
@@ -100,25 +98,25 @@ def get_dataloaders(config):
 
 
 # Example usage for testing the script independently
-if __name__ == "__main__":
-    import yaml
-
-    # Choose the correct config file
-    os.chdir(os.path.dirname(__file__))
-    os.chdir("..")
-    config_base = "./config/baseline_config.yaml"
-    config_improved = "./config/improved_config.yaml"
-
-    # Load config file and save configs in 'config' dictionary
-    with open(config_base, "r") as file:
-        config = yaml.safe_load(file)
-
-    train_l, test_l = get_dataloaders(config)
-
-    # Check one batch
-    images, labels = next(iter(train_l))
-    print(f"Batch shape: {images.shape}")  # Should be [64, 3, 32, 32]
-    print(f"Labels shape: {labels.shape}")
-    print(
-        f"Min val: {images.min():.2f}, Max val: {images.max():.2f}"
+# if __name__ == "__main__":
+    # import yaml
+    #
+    # # Choose the correct config file
+    # os.chdir(os.path.dirname(__file__))
+    # os.chdir("..")
+    # config_base = "./config/baseline_config.yaml"
+    # config_improved = "./config/improved_config.yaml"
+    #
+    # # Load config file and save configs in 'config' dictionary
+    # with open(config_base, "r") as file:
+    #     config = yaml.safe_load(file)
+    #
+    # train_l, test_l = get_dataloaders(config)
+    #
+    # # Check one batch
+    # images, labels = next(iter(train_l))
+    # print(f"Batch shape: {images.shape}")  # Should be [64, 3, 32, 32]
+    # print(f"Labels shape: {labels.shape}")
+    # print(
+    #     f"Min val: {images.min():.2f}, Max val: {images.max():.2f}"
     )  # Should be approx -1 and 1
