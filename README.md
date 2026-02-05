@@ -38,3 +38,4 @@ If you run into any errors during installation, try the following:
 ```
 python -m pip install --upgrade setuptools
 ```
+3. Check that your Python executable can be found in your system's PATH variable.
