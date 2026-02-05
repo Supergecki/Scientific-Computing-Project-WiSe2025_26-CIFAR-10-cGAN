@@ -208,3 +208,6 @@ __marimo__/
 
 # PyCharm files
 .idea/
+
+# Ignore the project description PDF
+praktikumwrproject2526.pdf
