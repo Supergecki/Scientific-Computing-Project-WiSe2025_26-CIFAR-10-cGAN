@@ -39,3 +39,10 @@ If you run into any errors during installation, try the following:
 python -m pip install --upgrade setuptools
 ```
 3. Check that your Python executable can be found in your system's PATH variable.
+
+## Development notes
+1. To update requirements, run
+```
+./util/requirements_update.bat
+```
+in the base directory.
