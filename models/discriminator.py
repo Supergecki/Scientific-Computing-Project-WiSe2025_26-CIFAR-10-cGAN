@@ -7,4 +7,3 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         pass
-    
