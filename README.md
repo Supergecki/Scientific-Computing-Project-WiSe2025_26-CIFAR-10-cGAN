@@ -1,6 +1,7 @@
 # Scientific-Computing-Project-WiSe2025_26-CIFAR-10-cGAN
 The repository for all code belonging to the Scientific Computing Project at TU Bergakademie Freiberg in winter semester 2025/26, implementing a cGAN on the CIFAR-10 dataset.
 
+
 ## Installation and Setup
 This project was developed and tested in Python version 3.14.
 It is recommended to also use this version as other Python versions may have breaking changes regarding our interfaces.
@@ -39,3 +40,10 @@ If you run into any errors during installation, try the following:
 python -m pip install --upgrade setuptools
 ```
 3. Check that your Python executable can be found in your system's PATH variable.
+
+## Development notes
+1. To update requirements, run
+```
+./util/requirements_update.bat
+```
+in the base directory.

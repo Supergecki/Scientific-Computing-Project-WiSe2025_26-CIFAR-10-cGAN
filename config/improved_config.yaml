@@ -13,8 +13,9 @@ training:
   beta2: 0.999  # parameters for Adam optimizer
 
 data:
+  num_workers: 2 # number of parallel subprocesses used for data loading
   num_classes: 10
   image_size: 32  # these parameters are for working with CIFAR-10, they are incorrect
-                  # in the example in the project description
-
+  # in the example in the project description
+  data_root: "./data/data/raw" # default file path for CIFAR-10 dataset after download
 seed: 42  # random seed, this choice is arbitrary but should stay the same for reproducibility
