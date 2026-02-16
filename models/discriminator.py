@@ -47,7 +47,7 @@ class Discriminator(nn.Module):
         :param x:
             torch.Tensor, input images in shape (3, image_size, image_size)
         :return:
-            scalar probability that x was a real image
+            class logit (x was a real image or not)
         """
         y = self.conv_layers(x)
         y = self.flatten_layers(y)
