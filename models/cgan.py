@@ -44,7 +44,7 @@ class CGAN:
         :return:
             generated image
         """
-        return self.generator.forward(z)
+        return self.generator(z)
 
     def discriminate(self, x):
         """
@@ -55,7 +55,7 @@ class CGAN:
         :return:
             scalar probability that x was a real image
         """
-        return self.discriminator.forward(x)
+        return self.discriminator(x)
 
     def save(self, path):
         """
