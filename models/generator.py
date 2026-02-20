@@ -46,10 +46,14 @@ class Generator(nn.Module):
 
         for out_channels in channel_config:
             layers.append(
-                nn.ConvTranspose2d(in_channels, out_channels, kernel_size=4, stride=2, padding=1)
+                nn.ConvTranspose2d(
+                    in_channels, out_channels, kernel_size=4, stride=2, padding=1
+                )
             )
             layers.append(nn.BatchNorm2d(out_channels))
-            layers.append(nn.ReLU(inplace=False))
+            layers.append(
+                nn.ReLU(inplace=False)
+            )  # inplace False for now, since it might corrupt computations using an improved architecture (e.g. WGAN-GP)
             in_channels = out_channels
 
         self.upsample_layers = layers
