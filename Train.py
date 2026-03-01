@@ -75,4 +75,4 @@ def train(dataloader, cgan_model, num_epochs=100, device='cuda'):
         if epoch % 5 == 0:
             cgan_model.save_checkpoint(f"./checkpoints/baseline_epoch_{epoch}.pth")
 
-        print("Training completed.")
+    print("Training completed.")
