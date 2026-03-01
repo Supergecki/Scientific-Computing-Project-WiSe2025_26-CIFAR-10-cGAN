@@ -3,6 +3,7 @@ import torch.nn as nn
 import os
 from torchvision.utils import save_image
 
+
 def train(dataloader, cgan_model, num_epochs=100, device='cuda'):
     """ Training Loop for cGAN.
     Args:
@@ -21,7 +22,7 @@ def train(dataloader, cgan_model, num_epochs=100, device='cuda'):
     cgan_model.discriminator.to(device)
 
     print("Starting Training Loop...")
-    
+
     # Training Loop
     for epoch in range(num_epochs):
         for i, (imgs, labels) in enumerate(dataloader):
@@ -53,7 +54,7 @@ def train(dataloader, cgan_model, num_epochs=100, device='cuda'):
 
             # Train Generator
             cgan_model.generator.optimizer.zero_grad()
-            
+
             # Evaluate generator loss
             gen_logits = cgan_model.discriminator(fake_imgs, real_labels)
             g_loss = criterion(gen_logits, valid)
@@ -64,7 +65,7 @@ def train(dataloader, cgan_model, num_epochs=100, device='cuda'):
             if i % 100 == 0:
                 print(f"[Epoch {epoch}/{num_epochs}] [Batch {i}/{len(dataloader)}] "
                       f"[D loss: {d_loss.item():.4f}] [G loss: {g_loss.item():.4f}]")
-                
+
         # Save metrics and generated images
         cgan_model.epoch = epoch + 1
         cgan_model.loss = (d_loss.item(), g_loss.item())
