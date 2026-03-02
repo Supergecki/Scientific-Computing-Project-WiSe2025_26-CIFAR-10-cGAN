@@ -17,6 +17,8 @@ class CGAN:
         torch Optimizer to use for the Discriminator
     :param latent_dim:
         int, dimension of the generator's latent space.
+    :param embed_dim:
+        int, dimension of the class label embedding (default: 50)
     :param num_classes:
         int, number of classes in the dataset (default: 10 for CIFAR-10)
     :param image_size:
@@ -30,6 +32,7 @@ class CGAN:
         generator_optimizer,
         discriminator_optimizer,
         latent_dim,
+        embed_dim=50,
         num_classes=10,
         image_size=32,
     ):
@@ -38,12 +41,14 @@ class CGAN:
             num_classes=num_classes,
             image_size=image_size,
             latent_dim=latent_dim,
+            embed_dim=embed_dim
         )
 
         self.discriminator = Discriminator(
             channel_config=discriminator_channel_config,
             num_classes=num_classes,
             image_size=image_size,
+            embed_dim=embed_dim
         )
 
         # save metrics in the class itself
