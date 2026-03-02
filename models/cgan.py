@@ -22,10 +22,29 @@ class CGAN:
     :param image_size:
         int, image size in pixels (image_size x image_size) (default: 32 for CIFAR-10)
     """
-    def __init__(self, generator_channel_config, discriminator_channel_config, generator_optimizer,
-                 discriminator_optimizer, latent_dim, num_classes=10, image_size=32):
-        self.generator = Generator(generator_channel_config, latent_dim, num_classes, image_size)
-        self.discriminator = Discriminator(discriminator_channel_config, num_classes, image_size)
+
+    def __init__(
+        self,
+        generator_channel_config,
+        discriminator_channel_config,
+        generator_optimizer,
+        discriminator_optimizer,
+        latent_dim,
+        num_classes=10,
+        image_size=32,
+    ):
+        self.generator = Generator(
+            channel_config=generator_channel_config,
+            num_classes=num_classes,
+            image_size=image_size,
+            latent_dim=latent_dim,
+        )
+
+        self.discriminator = Discriminator(
+            channel_config=discriminator_channel_config,
+            num_classes=num_classes,
+            image_size=image_size,
+        )
 
         # save metrics in the class itself
         self.epoch = 0
@@ -35,16 +54,18 @@ class CGAN:
         self.generator_optimizer = generator_optimizer
         self.discriminator_optimizer = discriminator_optimizer
 
-    def generate(self, z):
+    def generate(self, z, labels):
         """
         Calls the cGAN's generator's forward function.
 
         :param z:
-            latent vector to generate from
+            torch.Tensor, latent vector to generate from
+        :param labels:
+            torch.Tensor, class labels corresponding to the generation
         :return:
-            generated image
+            generated image tensor
         """
-        return self.generator(z)
+        return self.generator(z, labels)
 
     def discriminate(self, x):
         """
@@ -53,7 +74,7 @@ class CGAN:
         :param x:
             torch.Tensor, input images in shape (3, image_size, image_size)
         :return:
-            scalar probability that x was a real image
+            class logit (x was a real image or not)
         """
         return self.discriminator(x)
 
@@ -65,11 +86,17 @@ class CGAN:
         :return:
             None
         """
-        torch.save({'generator_state_dict': self.generator.state_dict(),
-                    'discriminator_state_dict': self.discriminator.state_dict(),
-                    'generator_optimizer_state_dict': self.generator_optimizer.state_dict(),
-                    'discriminator_optimizer_state_dict': self.discriminator_optimizer.state_dict(),
-                    'epoch': self.epoch, 'loss': self.loss}, path)
+        torch.save(
+            {
+                "generator_state_dict": self.generator.state_dict(),
+                "discriminator_state_dict": self.discriminator.state_dict(),
+                "generator_optimizer_state_dict": self.generator_optimizer.state_dict(),
+                "discriminator_optimizer_state_dict": self.discriminator_optimizer.state_dict(),
+                "epoch": self.epoch,
+                "loss": self.loss,
+            },
+            path,
+        )
 
     def load(self, path):
         """
@@ -80,9 +107,13 @@ class CGAN:
             None (all attributes of the class will be changed in place)
         """
         checkpoint = torch.load(path, weights_only=True)
-        self.generator.load_state_dict(checkpoint['generator_state_dict'])
-        self.discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
-        self.generator_optimizer.load_state_dict(checkpoint['generator_optimizer_state_dict'])
-        self.discriminator_optimizer.load_state_dict(checkpoint['discriminator_optimizer_state_dict'])
-        self.epoch = checkpoint['epoch']
-        self.loss = checkpoint['loss']
+        self.generator.load_state_dict(checkpoint["generator_state_dict"])
+        self.discriminator.load_state_dict(checkpoint["discriminator_state_dict"])
+        self.generator_optimizer.load_state_dict(
+            checkpoint["generator_optimizer_state_dict"]
+        )
+        self.discriminator_optimizer.load_state_dict(
+            checkpoint["discriminator_optimizer_state_dict"]
+        )
+        self.epoch = checkpoint["epoch"]
+        self.loss = checkpoint["loss"]
