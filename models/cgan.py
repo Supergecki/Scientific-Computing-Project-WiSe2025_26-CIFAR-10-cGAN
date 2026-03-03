@@ -72,16 +72,18 @@ class CGAN:
         """
         return self.generator(z, labels)
 
-    def discriminate(self, x):
+    def discriminate(self, x, labels):
         """
         Calls the cGAN's discriminator's forward function.
 
         :param x:
             torch.Tensor, input images in shape (3, image_size, image_size)
+        :param labels:
+            torch.Tensor, class labels in shape (batch_size,)
         :return:
             class logit (x was a real image or not)
         """
-        return self.discriminator(x)
+        return self.discriminator(x, labels)
 
     def save(self, path):
         """
