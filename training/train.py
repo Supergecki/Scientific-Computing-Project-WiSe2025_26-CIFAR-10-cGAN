@@ -1,12 +1,17 @@
+import sys
+from losses import get_baseline_loss, get_lsgan_loss
 import argparse
 import yaml
 import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
 import torch
 import torch.nn as nn
 import random
 import numpy as np
 from torchvision.utils import save_image
-import sys
 from data.dataloader import get_dataloaders
 from models.cgan import CGAN
 
@@ -87,9 +92,14 @@ def train(config):
     # Move models to devide and define the loss
     cgan_model.generator.to(device)
     cgan_model.discriminator.to(device)
-    criterion = nn.BCEWithLogitsLoss().to(
+    criterion = get_baseline_loss().to(
         device
     )  # later use loss from /training/losses.py
+
+    # create fixed noise and labels to see how exactly the same images evolve
+    fixed_z = torch.randn(25, latent_dim, device=device)
+    # generate 25 labels: 5 classes, 5 examples each
+    fixed_labels = torch.randint(0, num_classes, (25,), device=device)
 
     print("Starting Training lOop...")
 
@@ -97,6 +107,7 @@ def train(config):
     for epoch in range(num_epochs):
         epoch_d_loss = 0.0
         epoch_g_loss = 0.0
+        epoch_d_acc = 0.0
 
         for i, (imgs, labels) in enumerate(train_loader):
             batch_size = imgs.size(0)
@@ -112,6 +123,7 @@ def train(config):
             # Real images
             real_logits = cgan_model.discriminate(real_imgs, real_labels)
             d_real_loss = criterion(real_logits, valid)
+            real_acc = (real_logits > 0).float().mean().item()
 
             # Fake images
             z = torch.randn(batch_size, latent_dim, device=device)
@@ -119,6 +131,7 @@ def train(config):
 
             fake_logits = cgan_model.discriminate(fake_imgs.detach(), real_labels)
             d_fake_loss = criterion(fake_logits, fake)
+            fake_acc = (fake_logits < 0).float().mean().item()
 
             # Total discriminator loss
             d_loss = (d_real_loss + d_fake_loss) / 2
@@ -131,6 +144,7 @@ def train(config):
             # Compute Generator loss
             gen_logits = cgan_model.discriminate(fake_imgs, real_labels)
             g_loss = criterion(gen_logits, valid)
+            g_acc = (gen_logits > 0).float().mean().item()
 
             g_loss.backward()
             cgan_model.generator_optimizer.step()
@@ -138,27 +152,19 @@ def train(config):
             # Track losses for epoch averaging
             epoch_d_loss += d_loss.item()
             epoch_g_loss += g_loss.item()
+            epoch_d_acc += (real_acc + fake_acc) / 2
 
         # Print training progress once per epoch
         avg_d_loss = epoch_d_loss / len(train_loader)
         avg_g_loss = epoch_g_loss / len(train_loader)
+        avg_d_acc = epoch_d_acc / len(train_loader)
         print(
-            f"[Epoch {epoch+1}/{num_epochs}] [D loss: {avg_d_loss:.4f}] [G loss: {avg_g_loss:.4f}]"
+            f"[Epoch {epoch+1}/{num_epochs}] [D loss: {avg_d_loss:.4f}] [G loss: {avg_g_loss:.4f} [D Acc: {avg_d_acc:.4f}]]"
         )
 
         # Save metrics inside the model
         cgan_model.epoch = epoch + 1
         cgan_model.loss = (avg_d_loss, avg_g_loss)
-
-        # Save generated images
-        # value_range(-1, 1) denormalize images back to [0, 1] for proper saving
-        save_image(
-            fake_imgs.data[:25],
-            f"./results/epoch_{epoch+1}.png",
-            nrow=5,
-            normalize=True,
-            value_range=(-1, 1),
-        )
 
         # Save model checkpoint every 5 epochs
         if (epoch + 1) % 5 == 0:
@@ -166,7 +172,23 @@ def train(config):
             prefix = "baseline" if config.get("is_baseline", False) else "improved"
             cgan_model.save(f"./checkpoints/{prefix}_epoch_{epoch+1}.pth")
 
+        cgan_model.generator.eval()  # set to eval mode for generation
+        with torch.no_grad():
+            eval_imgs = cgan_model.generate(fixed_z, fixed_labels)
+        cgan_model.generator.train()  # return to train mode
+
+        # Save generated images
+        # value_range(-1, 1) denormalize images back to [0, 1] for proper saving
+        save_image(
+            eval_imgs.data,
+            f"./results/epoch_{epoch+1}.png",
+            nrow=5,
+            normalize=True,
+            value_range=(-1, 1),
+        )
+
     print("Training completed.")
+
 
 if __name__ == "__main__":
 
@@ -186,7 +208,6 @@ if __name__ == "__main__":
         default=False,
         help="use baseline_config.yaml instead of improved_config.yaml",
     )
-
 
     parser.add_argument(
         "-c",
