@@ -1,6 +1,6 @@
 import torch
-from discriminator import Discriminator
-from generator import Generator
+from models.discriminator import Discriminator
+from models.generator import Generator
 
 
 class CGAN:
