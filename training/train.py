@@ -3,6 +3,7 @@ from losses import get_baseline_loss, get_lsgan_loss
 import argparse
 import yaml
 import os
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
 if parent_dir not in sys.path:
@@ -14,6 +15,7 @@ import numpy as np
 from torchvision.utils import save_image
 from data.dataloader import get_dataloaders
 from models.cgan import CGAN
+from evaluation.evaluate import calculate_fid
 
 
 def set_seed(seed=42):
@@ -47,7 +49,7 @@ def train(config):
     os.makedirs("./checkpoints", exist_ok=True)
 
     # Initialize DataLoaders
-    train_loader, _ = get_dataloaders(config)
+    train_loader, test_loader = get_dataloaders(config)
 
     # Extract Model and Training Hyperparameters
     latent_dim = config["model"]["latent_dim"]
@@ -95,6 +97,11 @@ def train(config):
     criterion = get_baseline_loss().to(
         device
     )  # later use loss from /training/losses.py
+
+    prefix = "baseline" if config.get("is_baseline", False) else "improved"
+    log_file_path = f"./results/{prefix}_training_log.txt"
+    with open(log_file_path, "w") as f:
+        f.write("Epoch, D_Loss, G_Loss, D_Acc, FID \n")
 
     # create fixed noise and labels to see how exactly the same images evolve
     fixed_z = torch.randn(25, latent_dim, device=device)
@@ -158,8 +165,21 @@ def train(config):
         avg_d_loss = epoch_d_loss / len(train_loader)
         avg_g_loss = epoch_g_loss / len(train_loader)
         avg_d_acc = epoch_d_acc / len(train_loader)
+
+        current_fid = float("nan")
+        if (epoch + 1) % 5 == 0:
+            print(f"Calculating FID for Epoch {epoch + 1}")
+            current_fid = calculate_fid(
+                cgan_model.generator, test_loader, latent_dim, device, num_images=5000
+            )
+
+        with open(log_file_path, "a") as f:
+            f.write(
+                f"{epoch + 1}, {avg_d_loss:.4f}, {avg_g_loss:.4f}, {avg_d_acc:.4f}, {current_fid:.2f}\n"
+            )
+
         print(
-            f"[Epoch {epoch+1}/{num_epochs}] [D loss: {avg_d_loss:.4f}] [G loss: {avg_g_loss:.4f} [D Acc: {avg_d_acc:.4f}]]"
+            f"[Epoch {epoch+1}/{num_epochs}] [D loss: {avg_d_loss:.4f}] [G loss: {avg_g_loss:.4f}] [D Acc: {avg_d_acc:.4f}] [FID: {current_fid:.2f}]"
         )
 
         # Save metrics inside the model
@@ -169,7 +189,7 @@ def train(config):
         # Save model checkpoint every 5 epochs
         if (epoch + 1) % 5 == 0:
             # Differentiates checkpoint names based on the config
-            prefix = "baseline" if config.get("is_baseline", False) else "improved"
+            # prefix = "baseline" if config.get("is_baseline", False) else "improved"
             cgan_model.save(f"./checkpoints/{prefix}_epoch_{epoch+1}.pth")
 
         cgan_model.generator.eval()  # set to eval mode for generation
