@@ -77,6 +77,7 @@ def train(config):
         embed_dim=embed_dim,
         num_classes=num_classes,
         image_size=image_size,
+        is_baseline=config.get("is_baseline", False)
     )
 
     # Now that the model is created, we attach the optimizers
@@ -124,34 +125,47 @@ def train(config):
             valid = torch.ones(batch_size, 1, device=device)  # one for valid
             fake = torch.zeros(batch_size, 1, device=device)  # zero for fake
 
+
             # Train Discriminator
             cgan_model.discriminator_optimizer.zero_grad()
-
-            # Real images
             real_logits = cgan_model.discriminate(real_imgs, real_labels)
-            d_real_loss = criterion(real_logits, valid)
-            real_acc = (real_logits > 0).float().mean().item()
 
-            # Fake images
             z = torch.randn(batch_size, latent_dim, device=device)
             fake_imgs = cgan_model.generate(z, real_labels)
-
             fake_logits = cgan_model.discriminate(fake_imgs.detach(), real_labels)
-            d_fake_loss = criterion(fake_logits, fake)
-            fake_acc = (fake_logits < 0).float().mean().item()
 
-            # Total discriminator loss
-            d_loss = (d_real_loss + d_fake_loss) / 2
+
+            if config.get("is_baseline", False):
+                # basline: bce loss
+
+                d_real_loss = criterion(real_logits, valid)
+                d_fake_loss = criterion(fake_logits, fake)
+                d_loss = (d_real_loss + d_fake_loss) / 2
+            else:
+                from losses import hinge_loss_discriminator
+                d_loss = hinge_loss_discriminator(real_logits, fake_logits)
+
+
             d_loss.backward()
             cgan_model.discriminator_optimizer.step()
 
+
+            real_acc = (real_logits > 0).float().mean().item()
+            fake_acc = (fake_logits < 0).float().mean().item()
+
+
             # Train Generator
             cgan_model.generator_optimizer.zero_grad()
-
-            # Compute Generator loss
             gen_logits = cgan_model.discriminate(fake_imgs, real_labels)
-            g_loss = criterion(gen_logits, valid)
-            g_acc = (gen_logits > 0).float().mean().item()
+
+            if config.get("is_baseline", False):
+
+                g_loss = criterion(gen_logits, valid)
+            else:
+                # improved hinge loss
+                from losses import hinge_loss_generator
+                g_loss = hinge_loss_generator(gen_logits)
+
 
             g_loss.backward()
             cgan_model.generator_optimizer.step()
