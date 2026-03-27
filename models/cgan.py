@@ -1,8 +1,15 @@
 import torch
-from models.improved_discriminator import ImprovedDiscriminator
-from models.improved_generator import ImprovedGenerator
+
+# baseline imports
 from models.discriminator import Discriminator
 from models.generator import Generator
+
+# first improved versions (spec norm) imports
+from models.sn_cnn_discriminator import ImprovedDiscriminator as SNDiscriminator
+from models.sn_cnn_generatror import ImprovedGenerator as SNGeneartor
+
+# second improved versions (ResNet)
+# to be included
 
 
 class CGAN:
@@ -29,56 +36,49 @@ class CGAN:
         bool, that states whether baseline or improved architecture should be run
     """
 
-    def __init__(
-        self,
-        generator_channel_config,
-        discriminator_channel_config,
-        generator_optimizer,
-        discriminator_optimizer,
-        latent_dim,
-        embed_dim=50,
-        num_classes=10,
-        image_size=32,
-        is_baseline=True,
-    ):
-        if is_baseline:
+    def __init__(self, config):
+
+        self.config = config
+
+        # extract architecture type
+        arch_type = config["model"].get("architecture", "baseline")
+
+        gen_channels = config["model"]["generator_channels"]
+        disc_channels = config["model"]["discriminator_channels"]
+        latent_dim = config["model"]["latent_dim"]
+        embed_dim = config["model"]["embed_dim"]
+        num_classes = config["data"]["num_classes"]
+        image_size = config["data"]["image_size"]
+
+        print(f"Using Architecture: {arch_type.upper()}")
+
+        if arch_type == "baseline":
             self.generator = Generator(
-                channel_config=generator_channel_config,
-                num_classes=num_classes,
-                image_size=image_size,
-                latent_dim=latent_dim,
-                embed_dim=embed_dim
+                gen_channels, num_classes, image_size, latent_dim, embed_dim
             )
-
             self.discriminator = Discriminator(
-                channel_config=discriminator_channel_config,
-                num_classes=num_classes,
-                image_size=image_size,
-                embed_dim=embed_dim
+                disc_channels, num_classes, image_size, embed_dim
             )
+        elif arch_type == "sn_cnn":
+            self.generator = SNGeneartor(
+                gen_channels, num_classes, image_size, latent_dim, embed_dim
+            )
+            self.discriminator = SNDiscriminator(
+                disc_channels, num_classes, image_size, embed_dim
+            )
+        elif arch_type == "resnet":
+            # TODO
+            raise NotImplementedError("ResNet not yet implemented")
         else:
-            self.generator = ImprovedGenerator(
-                channel_config=generator_channel_config,
-                num_classes=num_classes,
-                image_size=image_size,
-                latent_dim=latent_dim,
-                embed_dim=embed_dim
-            )
-
-            self.discriminator = ImprovedDiscriminator(
-                channel_config=discriminator_channel_config,
-                num_classes=num_classes,
-                image_size=image_size,
-                embed_dim=embed_dim
-            )
+            raise ValueError(f"Unknown architecture: {arch_type}")
 
         # save metrics in the class itself
         self.epoch = 0
         self.loss = None
 
         # save optimizers
-        self.generator_optimizer = generator_optimizer
-        self.discriminator_optimizer = discriminator_optimizer
+        self.generator_optimizer = None
+        self.discriminator_optimizer = None
 
     def generate(self, z, labels):
         """

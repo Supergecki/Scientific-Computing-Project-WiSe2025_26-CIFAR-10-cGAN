@@ -1,3 +1,4 @@
+import copy
 import sys
 from losses import get_baseline_loss, get_lsgan_loss
 import argparse
@@ -16,6 +17,7 @@ from torchvision.utils import save_image
 from data.dataloader import get_dataloaders
 from models.cgan import CGAN
 from evaluation.evaluate import calculate_fid
+from losses import get_baseline_loss, hinge_loss_discriminator, hinge_loss_generator
 
 
 def set_seed(seed=42):
@@ -68,17 +70,7 @@ def train(config):
     # Initialize CGAN model
     # For now, setting optimizers to None. Since torch.optim requires model parameters at creation, they will be initialized once the model is instantiated. (this will be fixed/improved later, not very complicated)
 
-    cgan_model = CGAN(
-        generator_channel_config=gen_channels,
-        discriminator_channel_config=disc_channels,
-        generator_optimizer=None,
-        discriminator_optimizer=None,
-        latent_dim=latent_dim,
-        embed_dim=embed_dim,
-        num_classes=num_classes,
-        image_size=image_size,
-        is_baseline=config.get("is_baseline", False)
-    )
+    cgan_model = CGAN(config)
 
     # Now that the model is created, we attach the optimizers
     g_optimizer = torch.optim.Adam(
@@ -95,9 +87,18 @@ def train(config):
     # Move models to devide and define the loss
     cgan_model.generator.to(device)
     cgan_model.discriminator.to(device)
-    criterion = get_baseline_loss().to(
-        device
-    )  # later use loss from /training/losses.py
+
+    loss_type = config["training"].get("loss", "bce")
+    if loss_type == "bce":
+        criterion = get_baseline_loss().to(device)
+
+    use_ema = config["training"].get("use_ema", False)
+    if use_ema:
+        print("Using Exponential Moving Average (EMA) for Generator")
+        ema_generator = copy.deepcopy(cgan_model.generator).to(device)
+        ema_generator.eval()
+        for param in ema_generator.parameters():
+            param.requires_grad = False
 
     prefix = "baseline" if config.get("is_baseline", False) else "improved"
     log_file_path = f"./results/{prefix}_training_log.txt"
@@ -125,50 +126,50 @@ def train(config):
             valid = torch.ones(batch_size, 1, device=device)  # one for valid
             fake = torch.zeros(batch_size, 1, device=device)  # zero for fake
 
-
             # Train Discriminator
-            cgan_model.discriminator_optimizer.zero_grad()
-            real_logits = cgan_model.discriminate(real_imgs, real_labels)
 
             z = torch.randn(batch_size, latent_dim, device=device)
+
+            cgan_model.discriminator_optimizer.zero_grad()
+            real_logits = cgan_model.discriminate(real_imgs, real_labels)
             fake_imgs = cgan_model.generate(z, real_labels)
             fake_logits = cgan_model.discriminate(fake_imgs.detach(), real_labels)
 
 
-            if config.get("is_baseline", False):
-                # basline: bce loss
+            if loss_type == "bce":
+                d_loss = (
+                    criterion(real_logits, valid) + criterion(fake_logits, fake)
+                ) / 2
 
-                d_real_loss = criterion(real_logits, valid)
-                d_fake_loss = criterion(fake_logits, fake)
-                d_loss = (d_real_loss + d_fake_loss) / 2
-            else:
-                from losses import hinge_loss_discriminator
+            elif loss_type == "hinge":
                 d_loss = hinge_loss_discriminator(real_logits, fake_logits)
 
-
             d_loss.backward()
-            cgan_model.discriminator_optimizer.step()
 
+            cgan_model.discriminator_optimizer.step()
 
             real_acc = (real_logits > 0).float().mean().item()
             fake_acc = (fake_logits < 0).float().mean().item()
-
 
             # Train Generator
             cgan_model.generator_optimizer.zero_grad()
             gen_logits = cgan_model.discriminate(fake_imgs, real_labels)
 
-            if config.get("is_baseline", False):
-
+            if loss_type == "bce":
                 g_loss = criterion(gen_logits, valid)
-            else:
-                # improved hinge loss
-                from losses import hinge_loss_generator
+            elif loss_type == "hinge":
                 g_loss = hinge_loss_generator(gen_logits)
-
 
             g_loss.backward()
             cgan_model.generator_optimizer.step()
+
+            if use_ema:
+                decay = config["training"].get("ema_decay", 0.999)
+                with torch.no_grad():
+                    for ema_param, param in zip(
+                        ema_generator.parameters(), cgan_model.generator.parameters()
+                    ):
+                        ema_param.data.mul_(decay).add_(param.data, alpha=1 - decay)
 
             # Track losses for epoch averaging
             epoch_d_loss += d_loss.item()
@@ -181,10 +182,15 @@ def train(config):
         avg_d_acc = epoch_d_acc / len(train_loader)
 
         current_fid = float("nan")
+        # which model to evaluate 
+        eval_model = ema_generator if use_ema else cgan_model.generator
+
+
+
         if (epoch + 1) % 5 == 0:
             print(f"Calculating FID for Epoch {epoch + 1}")
             current_fid = calculate_fid(
-                cgan_model.generator, test_loader, latent_dim, device, num_images=5000
+                eval_model, test_loader, latent_dim, device, num_images=5000
             )
 
         with open(log_file_path, "a") as f:
@@ -208,7 +214,7 @@ def train(config):
 
         cgan_model.generator.eval()  # set to eval mode for generation
         with torch.no_grad():
-            eval_imgs = cgan_model.generate(fixed_z, fixed_labels)
+            eval_imgs = eval_model(fixed_z, fixed_labels)
         cgan_model.generator.train()  # return to train mode
 
         # Save generated images
@@ -225,52 +231,36 @@ def train(config):
 
 
 if __name__ == "__main__":
-
-    os.chdir(os.path.dirname(__file__))
-    os.chdir("..")
-
-    # parsing command line arguments, currently used for:
-    # - choosing the config file (defaults to `improved_config.yaml`, use '-b' flag to use `baseline_config.yaml`
-    #                             or '-c' flag to specify another config file using its path)
     parser = argparse.ArgumentParser(
         description="Run training loop of the CIFAR-10 cGAN"
     )
     parser.add_argument(
-        "-b",
-        "--baseline",
-        action="store_true",
-        default=False,
-        help="use baseline_config.yaml instead of improved_config.yaml",
-    )
-
-    parser.add_argument(
         "-c",
         "--config",
-        action="store",
+        type=str,
+        default="./config/sn_cnn_config.yaml",
+        help="Path to config file",
+    )
+
+    # NEW: Allow overriding the architecture from the command line!
+    parser.add_argument(
+        "-a",
+        "--arch",
+        type=str,
         default=None,
-        help="use specified config file; overrides -b",
+        choices=["baseline", "sn_cnn", "resnet"],
+        help="Override architecture type",
     )
 
     args = parser.parse_args()
 
-    # Choose the correct config file
-    config_file = "./config/improved_config.yaml"
-    is_baseline = False
-    if args.config is not None:
-        config_file = args.config
-    elif args.baseline:
-        config_file = "./config/baseline_config.yaml"
-        is_baseline = True
-
-    print(f"Loading configuration from: {config_file}")
-
-    # Load config file and save configs in 'config' dictionary
-    with open(config_file, "r") as file:
+    print(f"Loading configuration from: {args.config}")
+    with open(args.config, "r") as file:
         config = yaml.safe_load(file)
 
-    # Inject a flag so the script knows how to name the checkpoint files
-    config["is_baseline"] = is_baseline
+    # Override config if CLI argument is provided
+    if args.arch:
+        print(f"CLI Override: Setting architecture to {args.arch}")
+        config["model"]["architecture"] = args.arch
 
-    # Run the training loop using the loaded dictionary
     train(config)
-# Now configs are accessible via the dictionary, e.g. config['model']['embed_dim'] to get embedding dimension
