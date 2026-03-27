@@ -1,4 +1,6 @@
 import torch
+from models.improved_discriminator import ImprovedDiscriminator
+from models.improved_generator import ImprovedGenerator
 from models.discriminator import Discriminator
 from models.generator import Generator
 
@@ -23,6 +25,8 @@ class CGAN:
         int, number of classes in the dataset (default: 10 for CIFAR-10)
     :param image_size:
         int, image size in pixels (image_size x image_size) (default: 32 for CIFAR-10)
+    :param is_baseline:
+        bool, that states whether baseline or improved architecture should be run
     """
 
     def __init__(
@@ -35,21 +39,38 @@ class CGAN:
         embed_dim=50,
         num_classes=10,
         image_size=32,
+        is_baseline=True,
     ):
-        self.generator = Generator(
-            channel_config=generator_channel_config,
-            num_classes=num_classes,
-            image_size=image_size,
-            latent_dim=latent_dim,
-            embed_dim=embed_dim
-        )
+        if is_baseline:
+            self.generator = Generator(
+                channel_config=generator_channel_config,
+                num_classes=num_classes,
+                image_size=image_size,
+                latent_dim=latent_dim,
+                embed_dim=embed_dim
+            )
 
-        self.discriminator = Discriminator(
-            channel_config=discriminator_channel_config,
-            num_classes=num_classes,
-            image_size=image_size,
-            embed_dim=embed_dim
-        )
+            self.discriminator = Discriminator(
+                channel_config=discriminator_channel_config,
+                num_classes=num_classes,
+                image_size=image_size,
+                embed_dim=embed_dim
+            )
+        else:
+            self.generator = ImprovedGenerator(
+                channel_config=generator_channel_config,
+                num_classes=num_classes,
+                image_size=image_size,
+                latent_dim=latent_dim,
+                embed_dim=embed_dim
+            )
+
+            self.discriminator = ImprovedDiscriminator(
+                channel_config=discriminator_channel_config,
+                num_classes=num_classes,
+                image_size=image_size,
+                embed_dim=embed_dim
+            )
 
         # save metrics in the class itself
         self.epoch = 0
