@@ -1,0 +1,17 @@
+data:
+  data_root: "./data"
+  image_size: 32
+  num_workers: 2
+
+training:
+  batch_size: 128
+  num_epochs: 100
+  lr: 0.0002
+  beta1: 0.5
+  beta2: 0.999
+
+model:
+  latent_dim: 100
+  embed_dim: 50
+  gen_channels: [256, 128, 64] 
+  disc_channels: [64, 128, 256]
