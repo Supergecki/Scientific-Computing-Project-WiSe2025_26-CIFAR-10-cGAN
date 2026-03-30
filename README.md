@@ -37,20 +37,32 @@ The project uses YAML configuration files to manage hyperparameters and model ar
 
 * **To train the Baseline (DCGAN) model:**
     ```bash
-    python training/train.py --config config/baseline_config.yaml
+    python training/train.py -config config/baseline_config.yaml
     ```
 * **To train the Improved (BigGAN) model:**
     ```bash
-    python training/improved_config.yaml
+    python3 training/train.py -c config/biggan_config.yaml
     ```
 * **To visualize training results:**
     Once a training log is generated in the `results/` folder, run:
     ```bash
-    python evaluation/visualize.py --path ./results/biggan_run_log.txt
+    python3 evaluation/visualize.py --path ./results/biggan_training_log.txt
     ```
+    or 
+
+    ```bash
+    python3 evaluation/visualize.py --path ./results/baseline_training_log.txt
+    ```
+    This project also contains a spectral normalization model that can be trained and evaluated analogously.
 
 ### Installation troubleshooting
-[... (Keep your existing troubleshooting points) ...]
+If you run into any errors during installation, try the following:
+1. Run the `pip` command using its alternate version `python -m pip`, e.g. instead of `pip install *` run `python -m pip install *`. This issue is sometimes caused by not having the linking for `pip.exe` installed correctly.
+2. Run
+```
+python -m pip install --upgrade setuptools
+```
+3. Check that your Python executable can be found in your system's PATH variable.
 
 ## Project Structure
 * `config/`: YAML files containing all hyperparameters and model settings.
@@ -62,16 +74,9 @@ The project uses YAML configuration files to manage hyperparameters and model ar
 ## Hardware Requirements
 Training the BigGAN architecture is computationally intensive. We recommend:
 * **GPU:** NVIDIA GPU with at least 8GB VRAM (support for CUDA 12.x).
-* **Estimated Training Time:** ~4-4 hours for 100 epochs on an NIVIDA T4 (comparable to RTX 2070 super (although less memory than the T4)) class GPU.
+* **Estimated Training Time:** ~4-6 hours for 100 epochs on an NIVIDA T4 (comparable to RTX 2070 super (although less memory than the T4)) class GPU.
 
-### Installation troubleshooting
-If you run into any errors during installation, try the following:
-1. Run the `pip` command using its alternate version `python -m pip`, e.g. instead of `pip install *` run `python -m pip install *`. This issue is sometimes caused by not having the linking for `pip.exe` installed correctly.
-2. Run
-```
-python -m pip install --upgrade setuptools
-```
-3. Check that your Python executable can be found in your system's PATH variable.
+A GPU is highly recommended, as training on a CPU will likely take well over 10 hours.
 
 ## Development notes
 1. To update requirements, run
