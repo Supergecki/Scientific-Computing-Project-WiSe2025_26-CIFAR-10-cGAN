@@ -29,7 +29,40 @@ python -m pip install --upgrade pip
 ```
 pip install -r requirements.txt
 ```
-7. **TODO:** Describe how to run project.
+## Installation and Setup
+
+
+7. **Running the Project**
+The project uses YAML configuration files to manage hyperparameters and model architectures. To train a model, use the `train.py` script and point to the desired configuration.
+
+* **To train the Baseline (DCGAN) model:**
+    ```bash
+    python training/train.py --config config/baseline_config.yaml
+    ```
+* **To train the Improved (BigGAN) model:**
+    ```bash
+    python training/improved_config.yaml
+    ```
+* **To visualize training results:**
+    Once a training log is generated in the `results/` folder, run:
+    ```bash
+    python evaluation/visualize.py --path ./results/biggan_run_log.txt
+    ```
+
+### Installation troubleshooting
+[... (Keep your existing troubleshooting points) ...]
+
+## Project Structure
+* `config/`: YAML files containing all hyperparameters and model settings.
+* `models/`: Implementations of Baseline, SN-ResNet, and BigGAN architectures.
+* `training/`: Main training loop and loss function implementations.
+* `evaluation/`: Scripts for calculating FID scores and plotting training curves.
+* `results/`: Storage for generated sample grids and training logs.
+
+## Hardware Requirements
+Training the BigGAN architecture is computationally intensive. We recommend:
+* **GPU:** NVIDIA GPU with at least 8GB VRAM (support for CUDA 12.x).
+* **Estimated Training Time:** ~4-4 hours for 100 epochs on an NIVIDA T4 (comparable to RTX 2070 super (although less memory than the T4)) class GPU.
 
 ### Installation troubleshooting
 If you run into any errors during installation, try the following:
