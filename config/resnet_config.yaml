@@ -1,0 +1,23 @@
+model:
+  architecture: "resnet"
+  latent_dim: 128
+  embed_dim: 128
+  generator_channels: [256, 256, 256]
+  discriminator_channels: [128, 128, 128, 128]
+training:
+  loss: "hinge"
+  use_ema: True
+  ema_decay: 0.999
+  batch_size: 128
+  num_epochs: 100
+  n_critic: 2 # Train Discriminator 2 times for every 1 Generator step
+  lr_g: 0.0001 #  TTUR
+  lr_d: 0.0004 #  TTUR
+  beta1: 0.0
+  beta2: 0.999
+data:
+  num_classes: 10
+  image_size: 32
+  seed: 42
+  data_root: "./data/cifar10"
+  num_workers: 2 # number of parallel subprocesses used for data loading

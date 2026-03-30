@@ -48,5 +48,5 @@ def calculate_fid(generator, test_loader, latent_dim, device, num_images=5000):
             images_processed += batch_size
 
         fid_score = fid.compute().item()
-        generator.train()  # reset to train mode e
+        generator.train()  # reset to train mode 
         return fid_score
