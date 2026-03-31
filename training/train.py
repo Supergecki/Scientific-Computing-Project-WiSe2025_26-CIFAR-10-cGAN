@@ -77,7 +77,7 @@ def train(config):
         for param in ema_generator.parameters():
             param.requires_grad = False
 
-    prefix = "improved"
+    prefix = config["model"].get("architecture", "baseline")
     log_file_path = f"./results/{prefix}_training_log.txt"
     with open(log_file_path, "w") as f:
         f.write("Epoch, D_Loss, G_Loss, D_Acc, FID\n")
