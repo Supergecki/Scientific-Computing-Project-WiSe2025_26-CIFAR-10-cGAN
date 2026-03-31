@@ -203,7 +203,7 @@ def train(config):
                 # This improves quality at the cost of variety
                 trunc_noise = truncnorm.rvs(-1.5, 1.5, size=(25, latent_dim))
                 eval_z = torch.tensor(trunc_noise, dtype=torch.float32, device=device)
-                print(f"Applying Truncation Trick for {arch_type} visualization.")
+                # print(f"Applying Truncation Trick for {arch_type} visualization.")
             else:
                 # Use standard normal for Baseline or ResNet
                 eval_z = torch.randn(25, latent_dim, device=device)
